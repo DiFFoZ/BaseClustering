@@ -24,7 +24,7 @@ public sealed class BuildableDirectory
     private static BuildableDirectory? _instance;
 
     /// <summary>
-    /// This event is raised every time a buildable is added.
+    /// This event is raised every time buildables are added (in bulk).
     /// </summary>
     public event BuildablesChanged? OnBuildablesAdded;
 

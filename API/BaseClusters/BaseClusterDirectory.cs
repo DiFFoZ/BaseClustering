@@ -472,7 +472,7 @@ public sealed class BaseClusterDirectory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IEnumerable<BaseCluster> FindBestClusters(Buildable target)
     {
-        return Clusters.Where(k => k.IsWithinRange(target))
+        return m_Clusters.Where(k => k.IsWithinRange(target))
             .OrderBy(k => (k.AverageCenterPosition - target.Position).sqrMagnitude);
     }
 
@@ -502,7 +502,7 @@ public sealed class BaseClusterDirectory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IEnumerable<BaseCluster> FindBestClusters(Vector3 target)
     {
-        return Clusters.Where(k => k.IsWithinRange(target))
+        return m_Clusters.Where(k => k.IsWithinRange(target))
             .OrderBy(k => (k.AverageCenterPosition - target).sqrMagnitude);
     }
 
@@ -514,9 +514,6 @@ public sealed class BaseClusterDirectory
 
         foreach (var cluster in Clusters.ToList())
         {
-            if (cluster.Buildables.Count == 0)
-                continue;
-
             cluster.RemoveBuildables(builds);
         }
     }
@@ -546,12 +543,12 @@ public sealed class BaseClusterDirectory
                 if (bestCluster != null)
                 {
                     bestCluster.AddBuildable(buildable);
-                    return;
+                    continue;
                 }
 
                 // If we don't, add it to the global cluster.
                 gCluster.AddBuildable(buildable);
-                return;
+                continue;
             }
 
             // Otherwise, if its a structure, find all the clusters where it'd make a good target, and exclude any global clusters from the result.
@@ -565,13 +562,13 @@ public sealed class BaseClusterDirectory
                     cluster.AddBuildable(buildable);
                     RegisterCluster(cluster);
                     cluster.StealFromGlobal(gCluster);
-                    return;
+                    continue;
                 // If there's exactly 1 cluster found, simply add it to that cluster.
                 case 1:
                     cluster = bestClusters[0];
                     cluster.AddBuildable(buildable);
                     cluster.StealFromGlobal(gCluster);
-                    return;
+                    continue;
 
                 // However, if there's more than 1 cluster, select every single buildable from all found clusters.
                 default:
@@ -591,10 +588,10 @@ public sealed class BaseClusterDirectory
                     foreach (var c in newClusters)
                     {
                         RegisterCluster(c);
-                        c.StealFromGlobal(c);
+                        c.StealFromGlobal(gCluster);
                     }
 
-                    return;
+                    continue;
             }
         }
     }
