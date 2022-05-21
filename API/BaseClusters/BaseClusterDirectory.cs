@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Pustalorc.Plugins.BaseClustering.API.Buildables;
 using Pustalorc.Plugins.BaseClustering.API.Delegates;
 using Pustalorc.Plugins.BaseClustering.API.Patches;
@@ -13,6 +6,13 @@ using Pustalorc.Plugins.BaseClustering.API.Utilities;
 using Pustalorc.Plugins.BaseClustering.Config;
 using SDG.Unturned;
 using Steamworks;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -169,7 +169,7 @@ public sealed class BaseClusterDirectory
         try
         {
             var timer = Stopwatch.StartNew();
-            var river = new RiverExpanded(m_SaveFilePath);
+            using var river = new RiverExpanded(m_SaveFilePath);
             var allBuilds = allBuildables.ToList();
             var structures = allBuilds.OfType<StructureBuildable>().ToDictionary(k => k.InstanceId);
             var barricades = allBuilds.OfType<BarricadeBuildable>().ToDictionary(k => k.InstanceId);
@@ -181,6 +181,7 @@ public sealed class BaseClusterDirectory
                 Logging.Write(m_Plugin,
                     "Warning! Buildable count doesn't match saved count! Buildable save data was most likely modified or lost during server downtime. Clusters will be now rebuilt.",
                     ConsoleColor.Yellow);
+
                 return false;
             }
 
@@ -212,7 +213,7 @@ public sealed class BaseClusterDirectory
                         Logging.Write(m_Plugin,
                             $"Warning! Buildable with InstanceId {buildInstanceId} [isStructure: {isStructure}] not found! Save data was most likely modified or lost during server downtime. Clusters will be now rebuilt.",
                             ConsoleColor.Yellow);
-                        river.CloseRiver();
+
                         return false;
                     }
 
@@ -403,7 +404,8 @@ public sealed class BaseClusterDirectory
 
             // Finally, check if we need logging, and if we are ready to log it.
             currentCount += cluster.Buildables.Count;
-            if (!needLogging || !(currentCount / logRate > currentMultiplier)) continue;
+            if (!needLogging || !(currentCount / logRate > currentMultiplier))
+                continue;
 
             currentMultiplier++;
             Logging.Write(m_Plugin,
@@ -531,7 +533,8 @@ public sealed class BaseClusterDirectory
 
         foreach (var buildable in buildables)
         {
-            if (buildable.IsPlanted) return;
+            if (buildable.IsPlanted)
+                continue;
 
             // On spawning, check if its a barricade
             if (buildable is BarricadeBuildable)
@@ -572,10 +575,8 @@ public sealed class BaseClusterDirectory
 
                 // However, if there's more than 1 cluster, select every single buildable from all found clusters.
                 default:
-                    var allBuilds = bestClusters.SelectMany(k => k.Buildables).ToList();
-
                     // Make sure to include the buildable we spawned in that set.
-                    allBuilds.Add(buildable);
+                    var allBuilds = bestClusters.SelectMany(k => k.Buildables).Append(buildable).ToList();
 
                     // For all the found best clusters, we can now un-register them, as they are no longer needed.
                     foreach (var c in bestClusters)
@@ -618,7 +619,7 @@ public sealed class BaseClusterDirectory
     /// </returns>
     public IEnumerable<BaseCluster> GetClustersWithFilter(Func<BaseCluster, bool> filter)
     {
-        return Clusters.Where(filter);
+        return m_Clusters.Where(filter);
     }
 
     /// <summary>
@@ -633,7 +634,8 @@ public sealed class BaseClusterDirectory
     [UsedImplicitly]
     public BaseCluster? GetClusterWithElement(Transform model)
     {
-        return Clusters.FirstOrDefault(k => k.Buildables.Any(l => l.Model == model));
+        ThreadUtil.assertIsGameThread();
+        return m_Clusters.Find(k => k.Buildables.Any(l => l.Model == model));
     }
 
     /// <summary>
@@ -656,10 +658,7 @@ public sealed class BaseClusterDirectory
             if (builds == null)
                 return false;
 
-            if (isStructure)
-                builds = builds.OfType<StructureBuildable>();
-            else
-                builds = builds.OfType<BarricadeBuildable>();
+            builds = isStructure ? builds.OfType<StructureBuildable>() : (IEnumerable<Buildable>)builds.OfType<BarricadeBuildable>();
 
             return builds.Any(l => l.InstanceId == instanceId);
         });

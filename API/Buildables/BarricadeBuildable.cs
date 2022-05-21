@@ -24,6 +24,8 @@ public sealed class BarricadeBuildable : Buildable
     {
         BarricadeDrop = drop;
         BarricadeData = drop.GetServersideData();
+
+        IsPlanted = BarricadeDrop.model != null && BarricadeDrop.model.parent != null && BarricadeDrop.model.parent.CompareTag("Vehicle");
     }
 
     /// <inheritdoc />
@@ -66,9 +68,7 @@ public sealed class BarricadeBuildable : Buildable
     public override Asset Asset => BarricadeDrop.asset;
 
     /// <inheritdoc />
-    public override bool IsPlanted => BarricadeDrop.model != null &&
-                                      BarricadeDrop.model.parent != null &&
-                                      BarricadeDrop.model.parent.CompareTag("Vehicle");
+    public override bool IsPlanted { get; }
 
     /// <inheritdoc />
     public override void UnsafeDestroy()

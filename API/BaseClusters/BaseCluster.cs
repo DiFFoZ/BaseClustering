@@ -1,13 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
 using JetBrains.Annotations;
 using Pustalorc.Plugins.BaseClustering.API.Buildables;
 using Pustalorc.Plugins.BaseClustering.API.Delegates;
 using Pustalorc.Plugins.BaseClustering.API.Utilities;
 using Pustalorc.Plugins.BaseClustering.Config;
 using SDG.Unturned;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -18,6 +19,9 @@ namespace Pustalorc.Plugins.BaseClustering.API.BaseClusters;
 /// </summary>
 public sealed class BaseCluster
 {
+    private bool m_ShouldRebuiltCenter = true;
+    private Vector3 m_AverangeCenter;
+
     private readonly BaseClusteringPluginConfiguration m_PluginConfiguration;
     private readonly BaseClusterDirectory m_BaseClusterDirectory;
     private readonly List<Buildable> m_Buildables;
@@ -58,8 +62,18 @@ public sealed class BaseCluster
     /// <summary>
     /// Gets the average center position of the cluster.
     /// </summary>
-    public Vector3 AverageCenterPosition =>
-        m_Buildables.OfType<StructureBuildable>().AverageCenter(k => k.Position);
+    public Vector3 AverageCenterPosition
+    {
+        get
+        {
+            if (m_ShouldRebuiltCenter)
+            {
+                m_ShouldRebuiltCenter = false;
+                return m_AverangeCenter = m_Buildables.OfType<StructureBuildable>().AverageCenter(k => k.Position);
+            }
+            return m_AverangeCenter;
+        }
+    }
 
     /// <summary>
     /// Gets the unique instanceId of this cluster.
@@ -126,9 +140,10 @@ public sealed class BaseCluster
     /// <br/>
     /// <see langword="false"/> if the buildable is outside range.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsWithinRange(Buildable buildable)
     {
-        var structures = Buildables.OfType<StructureBuildable>();
+        var structures = m_Buildables.OfType<StructureBuildable>();
         var distanceCheck = buildable is StructureBuildable
             ? MathfEx.Square(m_PluginConfiguration.MaxDistanceBetweenStructures)
             : MathfEx.Square(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase);
@@ -148,11 +163,12 @@ public sealed class BaseCluster
     /// <remarks>
     /// Unlike <see cref="IsWithinRange(Buildable)"/>, this method only checks with <see cref="BaseClusteringPluginConfiguration.MaxDistanceToConsiderPartOfBase"/> not with <see cref="BaseClusteringPluginConfiguration.MaxDistanceBetweenStructures"/>.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsWithinRange(Vector3 position)
     {
         var distanceCheck = MathfEx.Square(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase);
 
-        return Buildables.OfType<StructureBuildable>()
+        return m_Buildables.OfType<StructureBuildable>()
             .Any(k => (k.Position - position).sqrMagnitude <= distanceCheck);
     }
 
@@ -163,6 +179,7 @@ public sealed class BaseCluster
     /// </summary>
     public void Reset()
     {
+        m_ShouldRebuiltCenter = true;
         m_Buildables.Clear();
         OnClusterReset?.Invoke();
     }
@@ -173,6 +190,7 @@ public sealed class BaseCluster
     /// <param name="build">The buildable to add to the base.</param>
     public void AddBuildable(Buildable build)
     {
+        m_ShouldRebuiltCenter = true;
         var isStruct = build is StructureBuildable;
         if (IsGlobalCluster && isStruct)
             throw new NotSupportedException("StructureBuildables are not supported by global clusters.");
@@ -192,6 +210,7 @@ public sealed class BaseCluster
     /// <param name="builds">The <see cref="IEnumerable{Buildable}"/> of <see cref="Buildable"/>s to add to the base.</param>
     public void AddBuildables(IEnumerable<Buildable> builds, bool shouldEmitEvent = true)
     {
+        m_ShouldRebuiltCenter = true;
         var consolidate = builds.ToList();
         m_Buildables.AddRange(consolidate);
 
@@ -208,10 +227,13 @@ public sealed class BaseCluster
     {
         var removedSomething = m_Buildables.Remove(build);
         if (removedSomething)
+        {
+            m_ShouldRebuiltCenter = true;
             OnBuildablesRemoved?.Invoke(new[] { build });
 
-        if (removedSomething && !IsBeingDestroyed && !IsGlobalCluster)
-            VerifyAndCorrectIntegrity();
+            if (!IsBeingDestroyed && !IsGlobalCluster)
+                VerifyAndCorrectIntegrity();
+        }
     }
 
     /// <summary>
@@ -229,15 +251,18 @@ public sealed class BaseCluster
         }
 
         if (removed.Count > 0)
+        {
+            m_ShouldRebuiltCenter = true;
             OnBuildablesRemoved?.Invoke(removed);
 
-        if (removed.Count > 0 && !IsBeingDestroyed && !IsGlobalCluster)
-            VerifyAndCorrectIntegrity();
+            if (!IsBeingDestroyed && !IsGlobalCluster)
+                VerifyAndCorrectIntegrity();
+        }
     }
 
     private bool VerifyStructureIntegrity()
     {
-        var allStructures = Buildables.OfType<StructureBuildable>().ToList();
+        var allStructures = m_Buildables.OfType<StructureBuildable>().ToList();
 
         if (allStructures.Count == 0)
             return false;
@@ -265,7 +290,7 @@ public sealed class BaseCluster
 
     private bool VerifyBarricadeIntegrity()
     {
-        var structures = Buildables.OfType<StructureBuildable>().ToList();
+        var structures = m_Buildables.OfType<StructureBuildable>().ToList();
 
         if (structures.Count == 0)
             return false;
@@ -286,7 +311,8 @@ public sealed class BaseCluster
         var barricadeIntegrity = VerifyBarricadeIntegrity();
 
         // If the base is still integrally sound, skip the rest of the code
-        if (structureIntegrity && barricadeIntegrity) return;
+        if (structureIntegrity && barricadeIntegrity)
+            return;
 
         var globalCluster = m_BaseClusterDirectory.GetOrCreateGlobalCluster();
 

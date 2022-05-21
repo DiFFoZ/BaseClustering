@@ -1,6 +1,7 @@
 using System;
 using Rocket.Core.Logging;
 using Rocket.Core.Plugins;
+using SDG.Unturned;
 
 namespace Pustalorc.Plugins.BaseClustering.API.Utilities;
 
@@ -37,7 +38,9 @@ internal static class Logging
         Console.WriteLine($"[{sourceIdent}]: {message}");
 
         if (logInRocket)
-            Logger.ExternalLog(rocketMessage ?? message, rocketColor ?? consoleColor);
+        {
+            CommandWindow.Log(rocketMessage ?? message);
+        }
 
         Console.ResetColor();
     }

@@ -12,7 +12,7 @@ namespace Pustalorc.Plugins.BaseClustering.API.Utilities;
 /// A modified class of <see cref="River"/> that implements more types and isn't sealed, so other plugins can inherit and expand it with more.
 /// </summary>
 [UsedImplicitly]
-public class RiverExpanded
+public class RiverExpanded : IDisposable
 {
     /// <summary>
     /// Reads a <see cref="double"/> from the stream.
@@ -422,6 +422,11 @@ public class RiverExpanded
     public void Skip(int count)
     {
         Stream.Read(Buffer, 0, count);
+    }
+
+    public void Dispose()
+    {
+        CloseRiver();
     }
 
     /// <summary>

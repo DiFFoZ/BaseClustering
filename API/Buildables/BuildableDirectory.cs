@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -7,6 +8,7 @@ using System.Threading;
 using JetBrains.Annotations;
 using Pustalorc.Plugins.BaseClustering.API.Delegates;
 using Pustalorc.Plugins.BaseClustering.API.Patches;
+using Pustalorc.Plugins.BaseClustering.API.Utilities;
 using Pustalorc.Plugins.BaseClustering.Config;
 using SDG.Unturned;
 using UnityEngine;
@@ -110,18 +112,25 @@ public sealed class BuildableDirectory
 
     private void InternalHandleDeferred(bool force = false)
     {
-        const int c_MaxBuildablesPerBatch = 30;
+        try
+        {
+            const int c_MaxBuildablesPerBatch = 50;
 
-        var deferredAdd = new List<Buildable>(c_MaxBuildablesPerBatch);
-        while ((force || deferredAdd.Count < c_MaxBuildablesPerBatch) && m_DeferredAdd.TryDequeue(out var element))
-            deferredAdd.Add(element);
+            var deferredAdd = new List<Buildable>(c_MaxBuildablesPerBatch);
+            while ((force || deferredAdd.Count < c_MaxBuildablesPerBatch) && m_DeferredAdd.TryDequeue(out var element))
+                deferredAdd.Add(element);
 
-        var deferredRemove = new List<Buildable>(c_MaxBuildablesPerBatch);
-        while ((force || deferredRemove.Count < c_MaxBuildablesPerBatch) && m_DeferredRemove.TryDequeue(out var element))
-            deferredRemove.Add(element);
+            var deferredRemove = new List<Buildable>(c_MaxBuildablesPerBatch);
+            while ((force || deferredRemove.Count < c_MaxBuildablesPerBatch) && m_DeferredRemove.TryDequeue(out var element))
+                deferredRemove.Add(element);
 
-        OnBuildablesAdded?.Invoke(deferredAdd);
-        OnBuildablesRemoved?.Invoke(deferredRemove);
+            OnBuildablesAdded?.Invoke(deferredAdd);
+            OnBuildablesRemoved?.Invoke(deferredRemove);
+        }
+        catch (Exception ex)
+        {
+            Logging.Write(this, "Caught exception in background worker:\n" + ex.ToString(), ConsoleColor.Red);
+        }
     }
 
     internal void WaitDestroyHandle()
