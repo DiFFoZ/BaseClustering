@@ -130,8 +130,8 @@ public sealed class BaseCluster
     {
         var structures = Buildables.OfType<StructureBuildable>();
         var distanceCheck = buildable is StructureBuildable
-            ? Mathf.Pow(m_PluginConfiguration.MaxDistanceBetweenStructures, 2)
-            : Mathf.Pow(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase, 2);
+            ? MathfEx.Square(m_PluginConfiguration.MaxDistanceBetweenStructures)
+            : MathfEx.Square(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase);
 
         return structures.Any(k => (k.Position - buildable.Position).sqrMagnitude <= distanceCheck);
     }
@@ -150,7 +150,7 @@ public sealed class BaseCluster
     /// </remarks>
     public bool IsWithinRange(Vector3 position)
     {
-        var distanceCheck = Mathf.Pow(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase, 2);
+        var distanceCheck = MathfEx.Square(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase);
 
         return Buildables.OfType<StructureBuildable>()
             .Any(k => (k.Position - position).sqrMagnitude <= distanceCheck);
@@ -180,7 +180,7 @@ public sealed class BaseCluster
         m_Buildables.Add(build);
         var gCluster = m_BaseClusterDirectory.GetOrCreateGlobalCluster();
         var buildsInRange = gCluster.Buildables.Where(IsWithinRange).ToList();
-        AddBuildables(buildsInRange);
+        AddBuildables(buildsInRange, false);
         gCluster.RemoveBuildables(buildsInRange);
         // Include the buildables from the global cluster that got added.
         OnBuildablesAdded?.Invoke(buildsInRange.Concat(new[] { build }));
@@ -190,11 +190,13 @@ public sealed class BaseCluster
     /// Adds multiple buildables to the base. This method does not spawn in any of the buildables.
     /// </summary>
     /// <param name="builds">The <see cref="IEnumerable{Buildable}"/> of <see cref="Buildable"/>s to add to the base.</param>
-    public void AddBuildables(IEnumerable<Buildable> builds)
+    public void AddBuildables(IEnumerable<Buildable> builds, bool shouldEmitEvent = true)
     {
         var consolidate = builds.ToList();
         m_Buildables.AddRange(consolidate);
-        OnBuildablesAdded?.Invoke(consolidate);
+
+        if (shouldEmitEvent)
+            OnBuildablesAdded?.Invoke(consolidate);
     }
 
     /// <summary>
@@ -237,10 +239,10 @@ public sealed class BaseCluster
     {
         var allStructures = Buildables.OfType<StructureBuildable>().ToList();
 
-        if (allStructures.Count <= 0)
+        if (allStructures.Count == 0)
             return false;
 
-        var maxStructureDistance = Mathf.Pow(m_PluginConfiguration.MaxDistanceBetweenStructures, 2);
+        var maxStructureDistance = MathfEx.Square(m_PluginConfiguration.MaxDistanceBetweenStructures);
         var succeeded = new List<StructureBuildable>();
 
         var random = allStructures[Random.Range(0, allStructures.Count)];
@@ -265,11 +267,11 @@ public sealed class BaseCluster
     {
         var structures = Buildables.OfType<StructureBuildable>().ToList();
 
-        if (structures.Count <= 0)
+        if (structures.Count == 0)
             return false;
 
         var maxBuildableDistance =
-            Mathf.Pow(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase, 2);
+            MathfEx.Square(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase);
 
         return Buildables.OfType<BarricadeBuildable>().All(br =>
             structures.Exists(k => (br.Position - k.Position).sqrMagnitude <= maxBuildableDistance));

@@ -133,7 +133,7 @@ public sealed class BaseClusteringPlugin : RocketPlugin<BaseClusteringPluginConf
         if (_harmony == null)
         {
             _harmony = new Harmony("com.pustalorc.baseClustering");
-            _harmony.PatchAll();
+            _harmony.PatchAll(Assembly);
         }
 
         BuildableDirectory = new BuildableDirectory(Configuration.Instance);
@@ -142,7 +142,7 @@ public sealed class BaseClusteringPlugin : RocketPlugin<BaseClusteringPluginConf
             BaseClusterDirectory = new BaseClusterDirectory(this, Configuration.Instance, BuildableDirectory);
 
         if (Level.isLoaded)
-            OnLevelLoaded(0);
+            OnLevelLoaded(Level.BUILD_INDEX_GAME);
         else
             Level.onLevelLoaded += OnLevelLoaded;
 
@@ -179,6 +179,11 @@ public sealed class BaseClusteringPlugin : RocketPlugin<BaseClusteringPluginConf
 
     private void OnLevelLoaded(int level)
     {
+        if (Level.BUILD_INDEX_GAME != level)
+        {
+            return;
+        }
+
         BuildableDirectory?.LevelLoaded();
         BaseClusterDirectory?.LevelLoaded();
         OnPluginFullyLoaded?.Invoke();

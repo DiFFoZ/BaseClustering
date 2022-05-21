@@ -42,7 +42,7 @@ public sealed class BuildableDirectory
     private readonly AutoResetEvent m_BackgroundWorkerEnd;
     private readonly int m_BackgroundWorkerSleepTime;
 
-    private BackgroundWorker m_BackgroundWorker;
+    private BackgroundWorker m_BackgroundWorker = null!;
 
     /// <summary>
     /// Gets a copied <see cref="IReadOnlyCollection{Buildable}"/> of all the buildables tracked.
@@ -69,7 +69,6 @@ public sealed class BuildableDirectory
         BarricadeManager.onBarricadeSpawned += BarricadeSpawned;
         PatchBuildablesDestroy.OnBuildableDestroyed += BuildableDestroyed;
 
-        m_BackgroundWorker = new BackgroundWorker { WorkerSupportsCancellation = true };
         RestartBackgroundWorker();
     }
 
@@ -78,6 +77,7 @@ public sealed class BuildableDirectory
         var builds = GetBuildables(useGeneratedBuilds: false);
 
         foreach (var element in builds)
+        {
             switch (element)
             {
                 case BarricadeBuildable b:
@@ -87,6 +87,7 @@ public sealed class BuildableDirectory
                     m_StructureBuildables.Add(element.InstanceId, s);
                     break;
             }
+        }
     }
 
     internal void Unload()
@@ -107,14 +108,16 @@ public sealed class BuildableDirectory
         m_BackgroundWorkerEnd.Set();
     }
 
-    private void InternalHandleDeferred()
+    private void InternalHandleDeferred(bool force = false)
     {
-        var deferredAdd = new List<Buildable>();
-        while (m_DeferredAdd.TryDequeue(out var element))
+        const int c_MaxBuildablesPerBatch = 30;
+
+        var deferredAdd = new List<Buildable>(c_MaxBuildablesPerBatch);
+        while ((force || deferredAdd.Count < c_MaxBuildablesPerBatch) && m_DeferredAdd.TryDequeue(out var element))
             deferredAdd.Add(element);
 
-        var deferredRemove = new List<Buildable>();
-        while (m_DeferredRemove.TryDequeue(out var element))
+        var deferredRemove = new List<Buildable>(c_MaxBuildablesPerBatch);
+        while ((force || deferredRemove.Count < c_MaxBuildablesPerBatch) && m_DeferredRemove.TryDequeue(out var element))
             deferredRemove.Add(element);
 
         OnBuildablesAdded?.Invoke(deferredAdd);
@@ -129,7 +132,7 @@ public sealed class BuildableDirectory
             m_BackgroundWorkerEnd.WaitOne();
         }
 
-        InternalHandleDeferred();
+        InternalHandleDeferred(force: true);
     }
 
     internal void RestartBackgroundWorker()

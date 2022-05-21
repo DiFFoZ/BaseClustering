@@ -31,44 +31,23 @@
         <DocumentationFile>bin\$(Configuration)\BaseClustering.xml</DocumentationFile>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Lib.Harmony" Version="2.1.1"/>
+        <PackageReference Include="Lib.Harmony" Version="2.2.1" />
         <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="OpenMod.UnityEngine.Redist" Version="2019.4.10" />
+        <PackageReference Include="OpenMod.Unturned.Redist" Version="3.22.8.1" />
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="Assembly-CSharp">
-            <HintPath>libs\Assembly-CSharp.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="com.rlabrecque.steamworks.net">
-            <HintPath>libs\com.rlabrecque.steamworks.net.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="Rocket.API">
-            <HintPath>libs\Rocket.API.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="Rocket.Core">
-            <HintPath>libs\Rocket.Core.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="Rocket.Unturned">
-            <HintPath>libs\Rocket.Unturned.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="UnityEngine">
-            <HintPath>libs\UnityEngine.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="UnityEngine.CoreModule">
-            <HintPath>libs\UnityEngine.CoreModule.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
-        <Reference Include="UnityEngine.PhysicsModule">
-            <HintPath>libs\UnityEngine.PhysicsModule.dll</HintPath>
-            <Private>False</Private>
-        </Reference>
+      <Reference Include="Rocket.API">
+        <HintPath>libs\Rocket.API.dll</HintPath>
+      </Reference>
+      <Reference Include="Rocket.Core">
+        <HintPath>libs\Rocket.Core.dll</HintPath>
+      </Reference>
+      <Reference Include="Rocket.Unturned">
+        <HintPath>libs\Rocket.Unturned.dll</HintPath>
+      </Reference>
     </ItemGroup>
 </Project>

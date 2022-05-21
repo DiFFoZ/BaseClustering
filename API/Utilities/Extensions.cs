@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Rocket.API;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
@@ -23,6 +24,7 @@ public static class Extensions
     /// <exception cref="ArgumentNullException">
     /// If <paramref name="source"/> is null, then this exception is thrown, as <paramref name="source"/> should never be null.
     /// </exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector3 AverageCenter(this IEnumerable<Vector3> source)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
@@ -55,6 +57,7 @@ public static class Extensions
     /// <br/>
     /// Therefore any input for this average center should support a selector to a <see cref="Vector3"/>.
     /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector3 AverageCenter<TSource>(this IEnumerable<TSource> source, Func<TSource, Vector3> selector)
     {
         return source.Select(selector).AverageCenter();
@@ -108,7 +111,7 @@ public static class Extensions
                 argsL[0].Split(' ').All(l => k.itemName.ToLower().Contains(l)) ||
                 argsL[0].Split(' ').All(l => k.name.ToLower().Contains(l))).ToList();
 
-            if (itemAssets.Count <= 0)
+            if (itemAssets.Count == 0)
                 continue;
 
             return itemAssets;
@@ -174,6 +177,7 @@ public static class Extensions
     /// <br/>
     /// <see langword="false"/> if <paramref name="vector"/> has no <see cref="float.NegativeInfinity"/> component.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNegativeInfinity(this Vector3 vector)
     {
         return float.IsNegativeInfinity(vector.x) || float.IsNegativeInfinity(vector.y) ||

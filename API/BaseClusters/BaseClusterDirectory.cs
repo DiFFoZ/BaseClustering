@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Pustalorc.Plugins.BaseClustering.API.Buildables;
 using Pustalorc.Plugins.BaseClustering.API.Delegates;
@@ -88,7 +89,7 @@ public sealed class BaseClusterDirectory
                          Level.info.name + "/Bases.dat";
         GenerateAndLoadAllClusters();
 
-        while (m_ClusterPool.Count < 25)
+        while (m_ClusterPool.Count < 100)
             m_ClusterPool.Add(new BaseCluster(m_PluginConfiguration, this, m_InstanceIds++));
     }
 
@@ -334,8 +335,8 @@ public sealed class BaseClusterDirectory
         // Initialize an empty sample output for this method.
         var output = new List<BaseCluster>();
         // Set constants of squared distance. This will be used on distance checks.
-        var maxStructureDistance = Mathf.Pow(m_PluginConfiguration.MaxDistanceBetweenStructures, 2);
-        var maxBarricadeDistance = Mathf.Pow(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase, 2);
+        var maxStructureDistance = MathfEx.Square(m_PluginConfiguration.MaxDistanceBetweenStructures);
+        var maxBarricadeDistance = MathfEx.Square(m_PluginConfiguration.MaxDistanceToConsiderPartOfBase);
         // Set a couple variables that are used for logging.
         var currentMultiplier = 0;
         var currentCount = 0;
@@ -454,6 +455,7 @@ public sealed class BaseClusterDirectory
     /// <br/>
     /// An instance of <see cref="BaseCluster"/> if a best cluster is available.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public BaseCluster? FindBestCluster(Buildable target)
     {
         return FindBestClusters(target).FirstOrDefault();
@@ -467,6 +469,7 @@ public sealed class BaseClusterDirectory
     /// An <see cref="IEnumerable{BaseCluster}"/> with the best <see cref="BaseCluster"/>s for the buildable.
     /// If no best clusters are found, <see cref="IEnumerable{BaseCluster}"/> will be empty.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IEnumerable<BaseCluster> FindBestClusters(Buildable target)
     {
         return Clusters.Where(k => k.IsWithinRange(target))
@@ -496,6 +499,7 @@ public sealed class BaseClusterDirectory
     /// An <see cref="IEnumerable{BaseCluster}"/> with the best <see cref="BaseCluster"/>s for the buildable.
     /// If no best clusters are found, <see cref="IEnumerable{BaseCluster}"/> will be empty.
     /// </returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IEnumerable<BaseCluster> FindBestClusters(Vector3 target)
     {
         return Clusters.Where(k => k.IsWithinRange(target))
@@ -505,11 +509,13 @@ public sealed class BaseClusterDirectory
     private void BuildablesDestroyed(IEnumerable<Buildable> buildables)
     {
         var builds = buildables.ToList();
+        if (builds.Count == 0)
+            return;
 
         foreach (var cluster in Clusters.ToList())
         {
-            if (builds.Count == 0)
-                return;
+            if (cluster.Buildables.Count == 0)
+                continue;
 
             cluster.RemoveBuildables(builds);
         }
@@ -562,7 +568,7 @@ public sealed class BaseClusterDirectory
                     return;
                 // If there's exactly 1 cluster found, simply add it to that cluster.
                 case 1:
-                    cluster = bestClusters.First();
+                    cluster = bestClusters[0];
                     cluster.AddBuildable(buildable);
                     cluster.StealFromGlobal(gCluster);
                     return;
