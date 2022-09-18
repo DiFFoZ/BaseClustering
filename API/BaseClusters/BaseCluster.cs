@@ -201,7 +201,7 @@ public sealed class BaseCluster
         AddBuildables(buildsInRange, false);
         gCluster.RemoveBuildables(buildsInRange);
         // Include the buildables from the global cluster that got added.
-        OnBuildablesAdded?.Invoke(buildsInRange.Concat(new[] { build }));
+        OnBuildablesAdded?.Invoke(buildsInRange.Append(build));
     }
 
     /// <summary>
@@ -262,27 +262,27 @@ public sealed class BaseCluster
 
     private bool VerifyStructureIntegrity()
     {
-        var allStructures = m_Buildables.OfType<StructureBuildable>().ToList();
+        var allStructures = m_Buildables.OfType<StructureBuildable>().ToHashSet();
 
         if (allStructures.Count == 0)
             return false;
 
         var maxStructureDistance = MathfEx.Square(m_PluginConfiguration.MaxDistanceBetweenStructures);
-        var succeeded = new List<StructureBuildable>();
+        var succeeded = new HashSet<StructureBuildable>();
 
-        var random = allStructures[Random.Range(0, allStructures.Count)];
+        var random = allStructures.ElementAt(Random.Range(0, allStructures.Count));
         succeeded.Add(random);
         allStructures.Remove(random);
 
         for (var i = 0; i < succeeded.Count; i++)
         {
-            var element = succeeded[i];
+            var element = succeeded.ElementAt(i);
 
             var result = allStructures
                 .Where(k => (element.Position - k.Position).sqrMagnitude <= maxStructureDistance)
-                .ToList();
-            succeeded.AddRange(result);
-            allStructures.RemoveAll(result.Contains);
+                .ToHashSet();
+            succeeded.UnionWith(result);
+            allStructures.RemoveWhere(result.Contains);
         }
 
         return allStructures.Count == 0;

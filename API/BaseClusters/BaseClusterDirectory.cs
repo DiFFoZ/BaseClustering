@@ -1,7 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Pustalorc.Plugins.BaseClustering.API.Buildables;
 using Pustalorc.Plugins.BaseClustering.API.Delegates;
-using Pustalorc.Plugins.BaseClustering.API.Patches;
 using Pustalorc.Plugins.BaseClustering.API.Utilities;
 using Pustalorc.Plugins.BaseClustering.Config;
 using SDG.Unturned;
@@ -58,7 +57,7 @@ public sealed class BaseClusterDirectory
     /// This copied collection includes the global cluster from <see cref="GetOrCreateGlobalCluster"/>.
     /// </remarks>
     public IReadOnlyCollection<BaseCluster> Clusters =>
-        new ReadOnlyCollection<BaseCluster>(m_Clusters.Concat(new[] { GetOrCreateGlobalCluster() }).ToList());
+        new ReadOnlyCollection<BaseCluster>(m_Clusters.Append(GetOrCreateGlobalCluster()).ToList());
 
     /// <summary>
     /// Creates a new instance of the BaseCluster Directory.
@@ -77,7 +76,6 @@ public sealed class BaseClusterDirectory
         m_SaveFilePath = ServerSavedata.directory + "/" + Provider.serverID + "/Level/" +
                          (Level.info?.name ?? "Washington") + "/Bases.dat";
 
-        PatchBuildableTransforms.OnBuildableTransformed += BuildableTransformed;
         buildableDirectory.OnBuildablesAdded += BuildablesSpawned;
         buildableDirectory.OnBuildablesRemoved += BuildablesDestroyed;
         SaveManager.onPostSave += Save;
@@ -95,7 +93,6 @@ public sealed class BaseClusterDirectory
 
     internal void Unload()
     {
-        PatchBuildableTransforms.OnBuildableTransformed -= BuildableTransformed;
         m_BuildableDirectory.OnBuildablesAdded -= BuildablesSpawned;
         m_BuildableDirectory.OnBuildablesRemoved -= BuildablesDestroyed;
         SaveManager.onPostSave -= Save;
@@ -518,13 +515,6 @@ public sealed class BaseClusterDirectory
         {
             cluster.RemoveBuildables(builds);
         }
-    }
-
-    private void BuildableTransformed(Buildable buildable)
-    {
-        var builds = new[] { buildable };
-        BuildablesDestroyed(builds);
-        BuildablesSpawned(builds);
     }
 
     private void BuildablesSpawned(IEnumerable<Buildable> buildables)

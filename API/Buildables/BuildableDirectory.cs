@@ -1,16 +1,16 @@
-﻿using System;
+﻿using JetBrains.Annotations;
+using Pustalorc.Plugins.BaseClustering.API.Delegates;
+using Pustalorc.Plugins.BaseClustering.API.Patches;
+using Pustalorc.Plugins.BaseClustering.API.Utilities;
+using Pustalorc.Plugins.BaseClustering.Config;
+using SDG.Unturned;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
-using JetBrains.Annotations;
-using Pustalorc.Plugins.BaseClustering.API.Delegates;
-using Pustalorc.Plugins.BaseClustering.API.Patches;
-using Pustalorc.Plugins.BaseClustering.API.Utilities;
-using Pustalorc.Plugins.BaseClustering.Config;
-using SDG.Unturned;
 using UnityEngine;
 
 namespace Pustalorc.Plugins.BaseClustering.API.Buildables;
@@ -70,13 +70,14 @@ public sealed class BuildableDirectory
         StructureManager.onStructureSpawned += StructureSpawned;
         BarricadeManager.onBarricadeSpawned += BarricadeSpawned;
         PatchBuildablesDestroy.OnBuildableDestroyed += BuildableDestroyed;
+        PatchBuildableTransforms.OnBuildableTransformed += BuildableTransformed;
 
         RestartBackgroundWorker();
     }
 
     internal void LevelLoaded()
     {
-        var builds = GetBuildables(useGeneratedBuilds: false);
+        var builds = GetBuildables(includePlants: true, useGeneratedBuilds: false);
 
         foreach (var element in builds)
         {
@@ -97,6 +98,7 @@ public sealed class BuildableDirectory
         StructureManager.onStructureSpawned -= StructureSpawned;
         BarricadeManager.onBarricadeSpawned -= BarricadeSpawned;
         PatchBuildablesDestroy.OnBuildableDestroyed -= BuildableDestroyed;
+        PatchBuildableTransforms.OnBuildableTransformed -= BuildableTransformed;
     }
 
     private void HandleDeferred(object sender, DoWorkEventArgs e)
@@ -149,6 +151,15 @@ public sealed class BuildableDirectory
         m_BackgroundWorker = new BackgroundWorker { WorkerSupportsCancellation = true };
         m_BackgroundWorker.DoWork += HandleDeferred;
         m_BackgroundWorker.RunWorkerAsync();
+    }
+
+    private void BuildableTransformed(Buildable buildable)
+    {
+        if (buildable.IsPlanted)
+            return;
+
+        m_DeferredRemove.Enqueue(buildable);
+        m_DeferredAdd.Enqueue(buildable);
     }
 
     private void BuildableDestroyed(uint instanceId, bool isStructure)
@@ -265,12 +276,9 @@ public sealed class BuildableDirectory
     [UsedImplicitly]
     public static Buildable? GetBuildable(uint instanceId, bool isStructure)
     {
-        var buildables = GetBuildables(includePlants: true);
+        var buildables = GetBuildables(includePlants: !isStructure);
 
-        if (isStructure)
-            buildables = buildables.OfType<StructureBuildable>();
-        else
-            buildables = buildables.OfType<BarricadeBuildable>();
+        buildables = isStructure ? buildables.OfType<StructureBuildable>() : buildables.OfType<BarricadeBuildable>();
 
         return buildables.FirstOrDefault(k => k.InstanceId == instanceId);
     }
